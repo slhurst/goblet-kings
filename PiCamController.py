@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 import SimpleCV,time,picamera
 from SimpleCV import Camera
 
+import scipy.spatial.distance as spsd
 
 def takePicture():
     with picamera.PiCamera() as camera:
@@ -30,14 +32,51 @@ def getAndVerifyImage():
         image = getImage()    
         image.show()
         print("Is this your image(Y/N)?")
-
-        if(raw_input() == "Y" or raw_input() == "y"):
-                return image
+        rawInput = raw_input()
+        if(rawInput == "Y" or rawInput == "y"):
+            return image
+ 
 def getRectanglesFromImage(image):
-    blobs = image.findBlobs(minsize = 200)
-    return [blob for blob in blobs if blob.isRectangle(0.5)]
+    return[blob for blob in image.findBlobs(minsize = 50, maxsize = 40000) if blob.isRectangle(0.5)]
 
-print "Welcome to GobletKingsGames, ",
-image = getAndVerifyImage()
-print "graeme"
-getRectanglesFromImage(image)
+def getSpaces(image):
+    BUFFER = 40
+
+    
+    rectangles = getRectanglesFromImage(image)
+    #print spsd.pdist(rectangles)
+    for rectangleOne in rectangles:
+        image.show()
+        
+
+        drawingLayer = image.dl()
+        rectangleOne.draw(layer=drawingLayer)
+
+        image.show()
+        time.sleep(0.5)
+        rectangleOneLongestSide = max(rectangleOne.width(), rectangleOne.height())
+        
+        for rectangleTwo in rectangles:            
+            if(rectangleOne != rectangleTwo):                
+                rectangleTwoLongestSide = max(rectangleTwo.width(), rectangleTwo.height())
+                distanceBetweenRectangles = spsd.pdist([(rectangleOne.centroid()[0], rectangleOne.centroid()[1]), (rectangleTwo.centroid()[0], rectangleTwo.centroid()[1])])
+                if(distanceBetweenRectangles <= (rectangleOneLongestSide/2) + (rectangleTwoLongestSide/2) + BUFFER ):
+                    rectangleTwo.draw(layer=drawingLayer, color=(0,0,128))                    
+                    image.show()                    
+                    print(rectangleOne, " ", rectangleTwo)
+                    time.sleep(0.5)
+        image.removeDrawingLayer()
+    
+
+#print "Welcome to GobletKingsGames, ",
+#image = getAndVerifyImage()
+image = getImage()
+
+rectangles = getSpaces(image)
+for rect in rectangles:
+    time.sleep(2)
+    rect.draw()
+    image.show()
+
+image.show()
+time.sleep(25)
