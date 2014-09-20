@@ -9,6 +9,8 @@ def expected_counter(size):
     return Counter({3:4, 5:4*(x-2), 8:(x-2)**2})
 
 def validate_board(graph):
+    if graph is None:
+        return False
     nodes = graph.nodes()
     size = len(nodes)
     if not is_square(size):
