@@ -119,11 +119,10 @@ def getGraph():
             print "You've made a valid board"
             for space in spaces[1]:                
                 print(space, spaces[1][space]) 
-            time.sleep(200)
             return spaces
         else:
             print "Your board is invalid - try again!"
         
 
-getGraph()
+#getGraph()
 
