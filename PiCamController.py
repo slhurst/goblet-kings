@@ -3,7 +3,7 @@ import SimpleCV,time,picamera
 from SimpleCV import Camera
 from pygraph.classes.graph import graph
 from pygraph.classes.exceptions import AdditionError
-from xs_and_os_validator import validate_board
+from square_grid_validator import validate_board
 
 import scipy.spatial.distance as spsd
 
