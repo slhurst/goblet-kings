@@ -3,7 +3,7 @@ import SimpleCV,time,picamera
 from SimpleCV import Camera
 from pygraph.classes.graph import graph
 from pygraph.classes.exceptions import AdditionError
-from square_grid_validator import validate_board
+from xs_and_os_validator import validate_board
 
 import scipy.spatial.distance as spsd
 import math
@@ -41,7 +41,7 @@ def getAndVerifyImage():
             return image
  
 def getRectanglesFromImage(image):
-    return[blob for blob in image.findBlobs(minsize = 50, maxsize = 40000) if blob.isRectangle(0.5)]
+    return[blob for blob in image.findBlobs(minsize = 90, maxsize = 40000) if blob.isRectangle(0.5)]
 
 def getNonRectangularBlobsFromImage(image):
     return[blob for blob in image.invert().findBlobs(minsize = 10, maxsize = 20000)]
@@ -70,18 +70,19 @@ def getSpaces(image):
     
     for (row, r) in newRectangles:
         #find overlapping
-        drawingLayer = image.dl()
-        r.draw(layer=drawingLayer)
+        #drawingLayer = image.dl()
+        #r.draw(layer=drawingLayer)
 
         overlapping = False
         
         for piece in pieces:            
             if(r.overlaps(piece)):
-                overlapping = True        
-                piece.draw(layer=drawingLayer, color=(120,120,0))
+                overlapping = True
+                break
+                #piece.draw(layer=drawingLayer, color=(120,120,0))
 
-        image.show()
-        image.removeDrawingLayer()
+        #image.show()
+        #image.removeDrawingLayer()
         #find overlapping end
         
         rectanglesToId[r] = str(nextId)
@@ -104,8 +105,8 @@ def getSpaces(image):
                         g.add_edge((rectanglesToId[rectangleOne], rectanglesToId[rectangleTwo]))
                     except AdditionError:
                         pass
-                    rectangleTwo.draw(layer=drawingLayer, color=(0,0,128))                                                        
-                    print(rectangleOne, " ", rectangleTwo)
+                    #rectangleTwo.draw(layer=drawingLayer, color=(0,0,128))                                                        
+                    #print(rectangleOne, " ", rectangleTwo)
 
         #image.show() 
         #image.removeDrawingLayer()
@@ -113,11 +114,11 @@ def getSpaces(image):
 
 def getGraph():
     while(True):        
-        spaces = getSpaces(getImage())
+        spaces = getSpaces(getAndVerifyImage())
         if validate_board(spaces[0]):
             print "You've made a valid board"
             for space in spaces[1]:                
-                print(space, spaces[1][space])
+                print(space, spaces[1][space]) 
             time.sleep(200)
             return spaces
         else:
