@@ -1,8 +1,6 @@
-#from PiCamController import getBoard
-from ideal_cam import getBoard
+from PiCamController import getGraph
+#from ideal_cam import getBoard
 from square_grid_validator import validate_board
-
-empty_status = {"1":False,"2":False,"3":False,"4":False,"5":False,"6":False,"7":False,"8":False,"9":False}
 
 class Archer:
     _range = 2
@@ -31,7 +29,7 @@ player1 = Player()
 player2 = Player()
 
 def get_until_only_added(status_map):
-    (g, new_status_map) = getBoard(None, status_map)
+    (g, new_status_map) = getGraph()
     for k, v in new_status_map.iteritems():
         if v and not status_map[k]:
             print "Don't move the pieces yet!"
@@ -40,16 +38,14 @@ def get_until_only_added(status_map):
     return new_status_map
 
 def do_it(): 
-    g = None
-    occupied_status = empty_status
-    (g, occupied_status) = getBoard(g, occupied_status)
+    (g, occupied_status) = getGraph() 
     while True:
         if validate_board(g):
             break
         else:
-            (g2, occupied_status2) = getBoard(g, occupied_status)
+            (g, occupied_status) = getGraph()
     print "Got a valid board. Player 1, place your archers now!"
-    (g1, new_occupied_status) = getBoard(g, occupied_status)
+    (g1, new_occupied_status) = getGraph()
     for k, v in new_occupied_status.iteritems():
         if v:
             print "Adding player 1 archer at "+k
