@@ -6,49 +6,45 @@ from pygraph.classes.exceptions import AdditionError
 from xs_and_os_validator import validate_board
 
 import scipy.spatial.distance as spsd
-import math, freenect, cv
+import math, freenect
 
+def takePicture():
+    camera = freenect.Kinect()
+    camera.resolution = (1024, 768)
+    camera.brightness = 70
+    camera.contrast = 100
+    camera.saturation = 100
+    #camera.start_preview()
 
-    
-
-    
+    time.sleep(5)
+    camera.capture('board.jpg')
 
 def getImage():
-    video = freenect.sync_get_video()[0]
-    video = video[:, :, ::-1]  # RGB -> BGR
-    image = cv.CreateImageHeader((video.shape[1], video.shape[0]), cv.IPL_DEPTH_8U, 3)
-    cv.SetData(image, video.tostring(),
-               video.dtype.itemsize * 3 * video.shape[1])
-    return (SimpleCV.ImageClass.Image(image) * 2).erode().erode()
-    
-##    (image, timestamp) = freenect.sync_get_video()
-##    if(image is None):
-##        print "What the fudge happened?"
-##        exit()
-##    else:
-##        return SimpleCV.ImageClass.Image(image).erode().erode()
+    image = SimpleCV.Image("board.jpg")
+    if(image is None):
+        print "What the fudge happened?"
+        exit()
+    else:
+        return image.erode().erode()
     
 
 def getAndVerifyImage():
     while(True):
+        print("Press Enter to take photo of your board, you will have a 5 second preview")
+        raw_input()
+        takePicture()
         image = getImage()    
         image.show()
-        return image
+        print("Is this your image(Y/N)?")
+        rawInput = raw_input()
+        if(rawInput == "Y" or rawInput == "y"):
+            return image
  
 def getRectanglesFromImage(image):
-    blobs = image.findBlobs(minsize = 90, maxsize = 40000)
-    if blobs is None:
-        return None
-    else:
-        return[blob for blob in blobs if blob.isRectangle(0.5)]
+    return[blob for blob in image.findBlobs(minsize = 90, maxsize = 40000) if blob.isRectangle(0.5)]
 
 def getNonRectangularBlobsFromImage(image):
-    blobs = image.invert().findBlobs(minsize = 6, maxsize = 20000)
-    if blobs is None:
-        return None
-    else:
-        return blobs        
-
+    return[blob for blob in image.invert().findBlobs(minsize = 10, maxsize = 20000)]
 
 def getSpaces(image):      
     BUFFER = 90
@@ -58,9 +54,6 @@ def getSpaces(image):
    
     pieces = getNonRectangularBlobsFromImage(image)
     rectangles = getRectanglesFromImage(image)
-    if rectangles is None:
-        return
-    
     rectanglesToId = {}
     rectanglesToFill = {}
     nextId = 1
@@ -69,16 +62,11 @@ def getSpaces(image):
     newRectangles = []
     rectangles.sort(key=lambda rectum: rectum.x)
     rows = math.floor(math.sqrt(len(rectangles)))
-
+    print(rows)
     for (index, rectangle) in enumerate(rectangles):        
         row = math.floor(index/rows)        
         newRectangles.append((row, rectangle))
     newRectangles.sort(key=lambda rectum: (rectum[0], rectum[1].y))
-
-    #get average
-    averageLength = sum([max(rectum.width(), rectum.height()) for rectum in rectangles])/len(rectangles)    
-    BUFFER = averageLength/2
-    
     
     for (row, r) in newRectangles:
         #find overlapping
@@ -86,20 +74,19 @@ def getSpaces(image):
         r.draw(layer=drawingLayer)
 
         overlapping = False
-
-        if pieces is not None:
-            for piece in pieces:            
-                if(r.overlaps(piece)):
-                    overlapping = True
-                    piece.draw(layer=drawingLayer, color=(120,120,0))
-                    break
+        
+        for piece in pieces:            
+            if(r.overlaps(piece)):
+                overlapping = True
+		piece.draw(layer=drawingLayer, color=(120,120,0))
+                break
                 
 
 
         image.show()
-	#time.sleep(1)
+	time.sleep(1)
         image.removeDrawingLayer(-1)
-        #find overlapping end        
+        #find overlapping end
         
         rectanglesToId[r] = str(nextId)
         rectanglesToFill[r] = overlapping
@@ -109,7 +96,7 @@ def getSpaces(image):
         drawingLayer = image.dl()
         rectangleOne.draw(layer=drawingLayer)
         image.show()
-        #time.sleep(0.1)
+        time.sleep(1)
         rectangleOneLongestSide = max(rectangleOne.width(), rectangleOne.height())
         
         for (row, rectangleTwo) in newRectangles:            
@@ -121,10 +108,11 @@ def getSpaces(image):
                         g.add_edge((rectanglesToId[rectangleOne], rectanglesToId[rectangleTwo]))
                     except AdditionError:
                         pass
-                    rectangleTwo.draw(layer=drawingLayer, color=(0,0,128))                                                                            
+                    rectangleTwo.draw(layer=drawingLayer, color=(0,0,128))                                                        
+                    print(rectangleOne, " ", rectangleTwo)
 
         image.show() 
-	#time.sleep(0.1)
+	time.sleep(1)
         image.removeDrawingLayer(-1)
     return (g, rectanglesToFill)
 
@@ -132,7 +120,7 @@ def getGraph():
     while(True):        
         spaces = getSpaces(getAndVerifyImage())
         #spaces = getSpaces(getImage())
-        if spaces is not None and validate_board(spaces[0]):
+        if validate_board(spaces[0]):
             print "You've made a valid board"
             for space in spaces[1]:                
                 print(space, spaces[1][space]) 
