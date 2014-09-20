@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import SimpleCV,time,picamera
 from SimpleCV import Camera
+from pygraph.classes.graph import graph
+from pygraph.classes.exceptions import AdditionError
+from xs_and_os_validator import validate_board
 
 import scipy.spatial.distance as spsd
 
@@ -21,7 +24,7 @@ def getImage():
         print "What the fudge happened?"
         exit()
     else:
-        return image.erode().erode()
+        return image #.erode().erode()
     
 
 def getAndVerifyImage():
@@ -40,20 +43,26 @@ def getRectanglesFromImage(image):
     return[blob for blob in image.findBlobs(minsize = 50, maxsize = 40000) if blob.isRectangle(0.5)]
 
 def getSpaces(image):
-    BUFFER = 40
-
+    BUFFER = 90
+    g = graph()
     
     rectangles = getRectanglesFromImage(image)
+    rectanglesToId = {}
+    nextId = 1
+    for r in rectangles:
+        rectanglesToId[r] = str(nextId)
+        g.add_node(str(nextId))
+        nextId += 1
     #print spsd.pdist(rectangles)
     for rectangleOne in rectangles:
-        image.show()
+##        image.show()
         
 
         drawingLayer = image.dl()
         rectangleOne.draw(layer=drawingLayer)
 
         image.show()
-        time.sleep(0.5)
+        time.sleep(0.25)
         rectangleOneLongestSide = max(rectangleOne.width(), rectangleOne.height())
         
         for rectangleTwo in rectangles:            
@@ -61,22 +70,25 @@ def getSpaces(image):
                 rectangleTwoLongestSide = max(rectangleTwo.width(), rectangleTwo.height())
                 distanceBetweenRectangles = spsd.pdist([(rectangleOne.centroid()[0], rectangleOne.centroid()[1]), (rectangleTwo.centroid()[0], rectangleTwo.centroid()[1])])
                 if(distanceBetweenRectangles <= (rectangleOneLongestSide/2) + (rectangleTwoLongestSide/2) + BUFFER ):
+                    try:
+                        g.add_edge((rectanglesToId[rectangleOne], rectanglesToId[rectangleTwo]))
+                    except AdditionError:
+                        pass
                     rectangleTwo.draw(layer=drawingLayer, color=(0,0,128))                    
-                    image.show()                    
+                                       
                     print(rectangleOne, " ", rectangleTwo)
-                    time.sleep(0.5)
+##                    time.sleep(0.25)
+        image.show() 
         image.removeDrawingLayer()
-    
+    return g
 
-#print "Welcome to GobletKingsGames, ",
-#image = getAndVerifyImage()
+print "Welcome to GobletKingsGames, ",
+image = getAndVerifyImage()
 image = getImage()
 
-rectangles = getSpaces(image)
-for rect in rectangles:
-    time.sleep(2)
-    rect.draw()
-    image.show()
+g = getSpaces(image)
+if validate_board(g):
+    print "You've made a valid board"
+else:
+    print "Your board is invalid - try again!"
 
-image.show()
-time.sleep(25)
