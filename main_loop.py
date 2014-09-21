@@ -3,6 +3,8 @@ from PiCamController import getGraph
 from square_grid_validator import validate_board
 from pygraph.algorithms  import minmax
 
+import copy
+
 class Archer:
     _range = 2
     _damage = 2
@@ -126,11 +128,24 @@ def getOppositePlayer(player):
         return player2
     else:
         return player1
+
+
+def doDamage(graph):
+    def doDamgeForPlayer(player):
+        for p_current_player in player.pieces:
+            shortest_paths = minmax.shortest_path(graph, p_current_player.node)[1]
+            
+            reachable_node = [path[0] for path in shortest_paths.iteritems() if path[1] <= p_current_player._range]
+            
+            for p_other_player in getOppositePlayer(player).pieces:                
+                if p_other_player.node in reachable_node:
+                    p_other_player.health = p_other_player.health - p_current_player._damage                    
+    
+    doDamgeForPlayer(player1)
+    doDamgeForPlayer(player2)
             
 current_status = do_it()
 current_player = player1
-
-
 
 
 while(True):
@@ -157,7 +172,7 @@ while(True):
         print("error, piece not found, take turn again")
         continue
 
-    empty_space_graph = g
+    empty_space_graph = copy.deepcopy(g)
     #hide all nodes that are occupied
     for k, v in new_status.iteritems():
         if v and k != new_location:                
@@ -171,7 +186,9 @@ while(True):
 
     #move
     print "moving",piece,"from location",old_location, "to", new_location
-    piece.node = new_location    
+    piece.node = new_location
+
+    doDamage(g)
 
     current_status = new_status
     current_player = getOppositePlayer(current_player)
