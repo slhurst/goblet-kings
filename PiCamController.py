@@ -7,6 +7,7 @@ from xs_and_os_validator import validate_board
 
 import scipy.spatial.distance as spsd
 import math, freenect, cv
+from SimpleCV import ROI
 
 
     
@@ -19,7 +20,7 @@ def getImage():
     image = cv.CreateImageHeader((video.shape[1], video.shape[0]), cv.IPL_DEPTH_8U, 3)
     cv.SetData(image, video.tostring(),
                video.dtype.itemsize * 3 * video.shape[1])
-    return (SimpleCV.ImageClass.Image(image) * 2).erode().erode()
+    return (SimpleCV.ImageClass.Image(image) * 1.5).erode().erode()
     
 ##    (image, timestamp) = freenect.sync_get_video()
 ##    if(image is None):
@@ -58,7 +59,7 @@ def getSpaces(image):
    
     pieces = getNonRectangularBlobsFromImage(image)
     rectangles = getRectanglesFromImage(image)
-    if rectangles is None:
+    if rectangles is None or not rectangles:
         return
     
     rectanglesToId = {}
@@ -69,12 +70,16 @@ def getSpaces(image):
     newRectangles = []
     rectangles.sort(key=lambda rectum: rectum.x)
     rows = math.floor(math.sqrt(len(rectangles)))
-
+    #print(rows, len(rectangles))
     for (index, rectangle) in enumerate(rectangles):        
         row = math.floor(index/rows)        
         newRectangles.append((row, rectangle))
     newRectangles.sort(key=lambda rectum: (rectum[0], rectum[1].y))
 
+    #print("***************************************************************")
+    #for rectangle in newRectangles:
+    #    print(rectangle)
+    #print("***************************************************************")
     #get average
     averageLength = sum([max(rectum.width(), rectum.height()) for rectum in rectangles])/len(rectangles)    
     BUFFER = averageLength/2
@@ -83,7 +88,7 @@ def getSpaces(image):
     for (row, r) in newRectangles:
         #find overlapping
         drawingLayer = image.dl()
-        r.draw(layer=drawingLayer)
+        r.draw(width=10, layer=drawingLayer)
 
         overlapping = False
 
@@ -91,41 +96,43 @@ def getSpaces(image):
             for piece in pieces:            
                 if(r.overlaps(piece)):
                     overlapping = True
-                    piece.draw(layer=drawingLayer, color=(120,120,0))
-                    break
-                
-
-
-        image.show()
-	#time.sleep(1)
-        image.removeDrawingLayer(-1)
+                    #piece.drawOutline(width=3, layer=drawingLayer, color=(120,120,0))
+                    break            
+        
         #find overlapping end        
         
         rectanglesToId[r] = str(nextId)
-        rectanglesToFill[r] = overlapping
+        rectanglesToFill[str(nextId)] = overlapping
         g.add_node(str(nextId))
         nextId += 1
+
+    image.show()
+    time.sleep(0.1)
+    image.removeDrawingLayer(-1)
+        
     for (row, rectangleOne) in newRectangles:       
-        drawingLayer = image.dl()
-        rectangleOne.draw(layer=drawingLayer)
-        image.show()
-        #time.sleep(0.1)
-        rectangleOneLongestSide = max(rectangleOne.width(), rectangleOne.height())
+        
+        
+        #rectangleOneLongestSide = max(rectangleOne.width(), rectangleOne.height())
+        rectangloeROI = ROI(rectangleOne)
+        rectangloeROI.resize(w = 2,h= 2)
+
+        #drawingLayer = image.dl()
+        #rectangloeROI.draw()
+       
+        #image.show()
         
         for (row, rectangleTwo) in newRectangles:            
             if(rectangleOne != rectangleTwo):                
-                rectangleTwoLongestSide = max(rectangleTwo.width(), rectangleTwo.height())
-                distanceBetweenRectangles = spsd.pdist([(rectangleOne.centroid()[0], rectangleOne.centroid()[1]), (rectangleTwo.centroid()[0], rectangleTwo.centroid()[1])])
-                if(distanceBetweenRectangles <= (rectangleOneLongestSide/2) + (rectangleTwoLongestSide/2) + BUFFER ):
+                if rectangloeROI.overlaps(rectangleTwo):
                     try:
                         g.add_edge((rectanglesToId[rectangleOne], rectanglesToId[rectangleTwo]))
                     except AdditionError:
                         pass
-                    rectangleTwo.draw(layer=drawingLayer, color=(0,0,128))                                                                            
 
-        image.show() 
-	#time.sleep(0.1)
-        image.removeDrawingLayer(-1)
+        #image.show() 
+	#time.sleep(0.05)
+        #image.removeDrawingLayer(-1)
     return (g, rectanglesToFill)
 
 def getGraph():
@@ -137,9 +144,9 @@ def getGraph():
             for space in spaces[1]:                
                 print(space, spaces[1][space]) 
             return spaces
-        else:
-            print "Your board is invalid - try again!"
+        #else:
+        #    print "Your board is invalid - try again!"
         
 
-getGraph()
+#getGraph()
 
