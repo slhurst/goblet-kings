@@ -1,6 +1,7 @@
 from PiCamController import getGraph
 #from ideal_cam import getBoard
 from square_grid_validator import validate_board
+from pygraph.algorithms  import minmax
 
 class Archer:
     _range = 2
@@ -114,8 +115,18 @@ def getMove(oldStatus, newStatus):
         return None
     
     
+def getPieceAtLocation(player, location):
+    for p in player.pieces:
+            print player, p
+            if p.node == location:
+                return p
 
-
+def getOppositePlayer(player):    
+    if player == player1:
+        return player2
+    else:
+        return player1
+            
 current_status = do_it()
 current_player = player1
 
@@ -131,31 +142,40 @@ while(True):
     raw_input()
     (g, new_status) = getGraph()
 
-    move_return = getMove(current_status, new_status)
-    print("-------------------")
-    for space in current_status:                
-                print(space, current_status[space])
-    print("*******************")                
-    for space in new_status:                
-                print(space, new_status[space])
-    print("-------------------")                
-    
-    if move_return is not None:
-        print "in move return"
-        (old_location, new_location) = move_return
-        for p in current_player.pieces:
-            if p.node == old_location:
-                print "piece ", p, " moved from ", old_location, " to ", new_location
-                p.node = new_location
-
-        current_status = new_status
-        if current_player == player1:
-            current_player = player2
-        else:
-            current_player = player1
-    else:
+    #Check what has moved
+    move_return = getMove(current_status, new_status)                 
+    if move_return is None:
         print "You didn't move anything, try again"
-        raw_input()
+        continue
+    
+    (old_location, new_location) = move_return
+    print "from",old_location,"to", new_location
+
+    #get piece        
+    piece = getPieceAtLocation(current_player, old_location)        
+    if piece is None:
+        print("error, piece not found, take turn again")
+        continue
+
+    empty_space_graph = g
+    #hide all nodes that are occupied
+    for k, v in new_status.iteritems():
+        if v and k != new_location:                
+            empty_space_graph.del_node(k)
+    
+    #calc if possible   
+    shortestPaths = minmax.shortest_path(empty_space_graph, old_location)[1]
+    if(new_location not in shortestPaths or shortestPaths[new_location] > piece._range):
+        print "can't, move piece there!"
+        continue
+
+    #move
+    print "moving",piece,"from location",old_location, "to", new_location
+    piece.node = new_location    
+
+    current_status = new_status
+    current_player = getOppositePlayer(current_player)
+
 
     
 

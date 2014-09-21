@@ -8,9 +8,7 @@ from xs_and_os_validator import validate_board
 import scipy.spatial.distance as spsd
 import math, freenect, cv
 from SimpleCV import ROI
-
-
-    
+   
 
     
 
@@ -21,14 +19,7 @@ def getImage():
     cv.SetData(image, video.tostring(),
                video.dtype.itemsize * 3 * video.shape[1])
     return (SimpleCV.ImageClass.Image(image) * 1.5).erode().erode()
-    
-##    (image, timestamp) = freenect.sync_get_video()
-##    if(image is None):
-##        print "What the fudge happened?"
-##        exit()
-##    else:
-##        return SimpleCV.ImageClass.Image(image).erode().erode()
-    
+        
 
 def getAndVerifyImage():
     while(True):
@@ -44,7 +35,7 @@ def getRectanglesFromImage(image):
         return[blob for blob in blobs if blob.isRectangle(0.5)]
 
 def getNonRectangularBlobsFromImage(image):
-    blobs = image.invert().findBlobs(minsize = 6, maxsize = 20000)
+    blobs = image.invert().findBlobs(minsize = 15, maxsize = 20000)
     if blobs is None:
         return None
     else:
@@ -80,10 +71,7 @@ def getSpaces(image):
     #for rectangle in newRectangles:
     #    print(rectangle)
     #print("***************************************************************")
-    #get average
-    averageLength = sum([max(rectum.width(), rectum.height()) for rectum in rectangles])/len(rectangles)    
-    BUFFER = averageLength/2
-    
+        
     
     for (row, r) in newRectangles:
         #find overlapping
